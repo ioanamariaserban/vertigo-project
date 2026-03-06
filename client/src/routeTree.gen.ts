@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from "./routes/index";
 import { Route as MarketsNewRouteImport } from "./routes/markets/new";
 import { Route as MarketsIdRouteImport } from "./routes/markets/$id";
 import { Route as AuthRegisterRouteImport } from "./routes/auth/register";
+import { Route as AuthLogoutRouteImport } from "./routes/auth/logout";
 import { Route as AuthLoginRouteImport } from "./routes/auth/login";
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: "/auth/register",
   getParentRoute: () => rootRouteImport,
 } as any);
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: "/auth/logout",
+  path: "/auth/logout",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: "/auth/login",
   path: "/auth/login",
@@ -44,6 +50,7 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/auth/logout": typeof AuthLogoutRoute;
   "/auth/register": typeof AuthRegisterRoute;
   "/markets/$id": typeof MarketsIdRoute;
   "/markets/new": typeof MarketsNewRoute;
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/auth/logout": typeof AuthLogoutRoute;
   "/auth/register": typeof AuthRegisterRoute;
   "/markets/$id": typeof MarketsIdRoute;
   "/markets/new": typeof MarketsNewRoute;
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/": typeof IndexRoute;
   "/auth/login": typeof AuthLoginRoute;
+  "/auth/logout": typeof AuthLogoutRoute;
   "/auth/register": typeof AuthRegisterRoute;
   "/markets/$id": typeof MarketsIdRoute;
   "/markets/new": typeof MarketsNewRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/auth/login" | "/auth/register" | "/markets/$id" | "/markets/new";
+  fullPaths:
+    | "/"
+    | "/auth/login"
+    | "/auth/logout"
+    | "/auth/register"
+    | "/markets/$id"
+    | "/markets/new";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/auth/login" | "/auth/register" | "/markets/$id" | "/markets/new";
-  id: "__root__" | "/" | "/auth/login" | "/auth/register" | "/markets/$id" | "/markets/new";
+  to: "/" | "/auth/login" | "/auth/logout" | "/auth/register" | "/markets/$id" | "/markets/new";
+  id:
+    | "__root__"
+    | "/"
+    | "/auth/login"
+    | "/auth/logout"
+    | "/auth/register"
+    | "/markets/$id"
+    | "/markets/new";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AuthLoginRoute: typeof AuthLoginRoute;
+  AuthLogoutRoute: typeof AuthLogoutRoute;
   AuthRegisterRoute: typeof AuthRegisterRoute;
   MarketsIdRoute: typeof MarketsIdRoute;
   MarketsNewRoute: typeof MarketsNewRoute;
@@ -109,6 +132,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthRegisterRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/auth/logout": {
+      id: "/auth/logout";
+      path: "/auth/logout";
+      fullPath: "/auth/logout";
+      preLoaderRoute: typeof AuthLogoutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/auth/login": {
       id: "/auth/login";
       path: "/auth/login";
@@ -122,6 +152,7 @@ declare module "@tanstack/react-router" {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthLogoutRoute: AuthLogoutRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   MarketsIdRoute: MarketsIdRoute,
   MarketsNewRoute: MarketsNewRoute,

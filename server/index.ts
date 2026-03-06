@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { authRoutes } from "./src/api/auth.routes";
 import { marketRoutes } from "./src/api/markets.routes";
+import { jwtPlugin } from "./src/plugins/jwt";
 
 const PORT = process.env.PORT || 4001;
 
@@ -12,6 +13,7 @@ export const app = new Elysia()
       allowedHeaders: ["Content-Type", "Authorization"],
     }),
   )
+  .use(jwtPlugin)
   .onError(({ code, set }) => {
     if (code === "NOT_FOUND") {
       set.status = 404;

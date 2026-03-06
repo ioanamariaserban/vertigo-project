@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import db from "../db";
 import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
-import { hashPassword, verifyPassword, createSessionToken } from "../lib/auth";
+import { hashPassword, verifyPassword, type AuthTokenPayload } from "../lib/auth";
 import {
   validateRegistration,
   validateLogin,
@@ -9,11 +9,17 @@ import {
   validateBet,
 } from "../lib/validation";
 
+type JwtSigner = {
+  sign: (payload: AuthTokenPayload) => Promise<string>;
+};
+
 export async function handleRegister({
   body,
+  jwt,
   set,
 }: {
   body: { username: string; email: string; password: string };
+  jwt: JwtSigner;
   set: { status: number };
 }) {
   const { username, email, password } = body;
@@ -37,7 +43,7 @@ export async function handleRegister({
 
   const newUser = await db.insert(usersTable).values({ username, email, passwordHash }).returning();
 
-  const token = createSessionToken(newUser[0].id);
+  const token = await jwt.sign({ userId: newUser[0].id });
 
   set.status = 201;
   return {
@@ -50,9 +56,11 @@ export async function handleRegister({
 
 export async function handleLogin({
   body,
+  jwt,
   set,
 }: {
   body: { email: string; password: string };
+  jwt: JwtSigner;
   set: { status: number };
 }) {
   const { email, password } = body;
@@ -72,7 +80,7 @@ export async function handleLogin({
     return { error: "Invalid email or password" };
   }
 
-  const token = createSessionToken(user.id);
+  const token = await jwt.sign({ userId: user.id });
 
   return {
     id: user.id,

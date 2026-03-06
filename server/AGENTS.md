@@ -52,9 +52,11 @@ src/
 │   ├── migrate.ts             # Migration runner
 │   └── seed.ts                # Sample data seeding
 ├── lib/
-│   ├── auth.ts                # Password hashing & token creation
+│   ├── auth.ts                # Password hashing & auth payload helpers
 │   ├── validation.ts          # Input validation for requests
 │   └── odds.ts                # Odds calculation logic
+├── plugins/
+│   └── jwt.ts                 # Elysia JWT plugin configuration
 └── middleware/
     └── auth.middleware.ts      # Elysia derive plugin for Bearer token auth
 
@@ -128,7 +130,7 @@ All endpoints at `http://localhost:4001`:
 
 ## Authentication
 
-Tokens are base64-encoded JSON with `userId` and `iat` (issued at).
+Tokens are JWTs signed with `@elysiajs/jwt` and include `userId`.
 
 Pass token in header:
 
@@ -188,7 +190,7 @@ All tests verify:
 
 1. **Hot reload**: Use `bun run dev` (--hot flag in index.ts)
 2. **Database changes**: Update schema.ts, then run `bun src/db/migrate.ts`
-3. **Environment**: Create `.env` file (Bun auto-loads it)
+3. **Environment**: Create `.env` file (Bun auto-loads it) and set `JWT_SECRET`
 4. **Debugging**: Add `console.log()` - output shows in terminal
 5. **Password reset**: Use `bun reset-password.ts user@example.com` to generate new password
 6. **Elysia validation**: Body/params/query schemas use `t` from Elysia (TypeBox). Business validation stays in `src/lib/validation.ts`

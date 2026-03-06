@@ -58,7 +58,10 @@ function DashboardPage() {
             <h1 className="text-4xl font-bold text-gray-900">Markets</h1>
             <p className="text-gray-600 mt-2">Welcome back, {user?.username}!</p>
           </div>
-          <div className="space-x-4">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate({ to: "/auth/logout" })}>
+              Logout
+            </Button>
             <Button onClick={() => navigate({ to: "/markets/new" })}>Create Market</Button>
           </div>
         </div>

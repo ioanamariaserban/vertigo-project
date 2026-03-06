@@ -12,10 +12,13 @@ cd client && bun install && cd ..
 ```bash
 cd server
 
-# Generate migrations from schema if DB is not present.
+# Create a copy of the environment variables
+cp .env.example .env
+
+# Generate local drizzle files from the schema
 bun run db:generate
 
-# Apply migrations to create tables (the DB needs to be created before)
+# Apply generated migrations to create tables
 bun run db:migrate
 
 # (OPTIONAL) Seed with test data & users
@@ -58,7 +61,8 @@ cd client && bun run dev
 ```
 Backend (Bun + SQLite + Drizzle):
 server/
-├── src/api/handlers.ts     → All endpoints
+├── src/api/auth.routes.ts  → Auth endpoints
+├── src/api/markets.routes.ts → Markets and betting endpoints
 ├── src/db/schema.ts        → Database tables
 ├── src/lib/auth.ts         → Password/token handling
 └── index.ts                → Server startup
@@ -68,6 +72,7 @@ client/
 ├── src/routes/             → Pages
 │   ├── index.tsx           → Dashboard
 │   ├── auth/login.tsx      → Login
+│   ├── auth/logout.tsx     → Logout redirect page
 │   ├── auth/register.tsx   → Sign up
 │   └── markets/$id.tsx     → Market detail
 ├── src/components/         → React components
@@ -103,7 +108,7 @@ PORT=4001
 
 ### Client (Vite)
 ```
-VITE_API_URL=http://localhost:3001
+VITE_API_URL=http://localhost:4001
 ```
 
 ---
@@ -117,7 +122,7 @@ cd server
 # Start dev server with hot reload
 bun run dev
 
-# Generate database migrations
+# Generate local drizzle files from schema changes
 bun run db:generate
 
 # Run migrations
@@ -147,7 +152,7 @@ bun test
 bun run lint
 
 # Format code
-bun run check
+bun run format
 ```
 
 ---
@@ -159,7 +164,7 @@ bun run check
 # Reset database
 rm server/database.sqlite
 
-# Regenerate
+# Recreate local drizzle output and schema
 cd server
 bun run db:generate
 bun run db:migrate
@@ -178,7 +183,8 @@ bun run db:migrate
 ```bash
 # Reinstall everything
 rm -rf server/node_modules client/node_modules
-bun install
+cd server && bun install
+cd ../client && bun install
 ```
 
 ---
