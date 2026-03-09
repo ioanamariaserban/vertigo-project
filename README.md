@@ -18,6 +18,8 @@ We need to keep in mind that the current LLM models are very powerful, thus the 
 
 The submission deadline for this test is **11:59 PM on April 17, 2026**. Please make sure to submit your application before the deadline to be considered for the internship.
 
+For the review, we will try to review it shortly after you submit the solution, based on our availability.
+
 ### I do not know web development, can I still do the test?
 
 Yes. With the rise of AI tools, the entry barrier for web development is much lower than before. You can use AI tools to assist you in the development process.
