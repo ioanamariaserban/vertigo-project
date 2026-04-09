@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count } from "drizzle-orm";
 import db from "../db";
 import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
 import { hashPassword, verifyPassword, type AuthTokenPayload } from "../lib/auth";
@@ -8,6 +8,7 @@ import {
   validateMarketCreation,
   validateBet,
 } from "../lib/validation";
+import { wsManager } from "../lib/websocket";
 
 type JwtSigner = {
   sign: (payload: AuthTokenPayload) => Promise<string>;
@@ -137,9 +138,30 @@ export async function handleCreateMarket({
   };
 }
 
-export async function handleListMarkets({ query }: { query: { status?: string } }) {
-  const statusFilter = query.status || "active";
+export interface ListMarketsQuery {
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: "createdAt" | "totalBets" | "participants";
+  sortOrder?: "asc" | "desc";
+}
 
+export async function handleListMarkets({ query }: { query: ListMarketsQuery }) {
+  const statusFilter = query.status || "active";
+  const page = Math.max(1, query.page || 1);
+  const limit = Math.min(50, Math.max(1, query.limit || 20));
+  const sortBy = query.sortBy || "createdAt";
+  const sortOrder = query.sortOrder || "desc";
+  const offset = (page - 1) * limit;
+
+  // Get total count for pagination
+  const totalCountResult = await db
+    .select({ count: count() })
+    .from(marketsTable)
+    .where(eq(marketsTable.status, statusFilter));
+  const totalCount = totalCountResult[0]?.count || 0;
+
+  // Get markets with basic info
   const markets = await db.query.marketsTable.findMany({
     where: eq(marketsTable.status, statusFilter),
     with: {
@@ -152,6 +174,7 @@ export async function handleListMarkets({ query }: { query: { status?: string } 
     },
   });
 
+  // Enrich markets with bet data and participant counts
   const enrichedMarkets = await Promise.all(
     markets.map(async (market) => {
       const betsPerOutcome = await Promise.all(
@@ -166,6 +189,13 @@ export async function handleListMarkets({ query }: { query: { status?: string } 
         }),
       );
 
+      // Get unique participants count
+      const participantsResult = await db
+        .select({ uniqueUsers: sql<number>`COUNT(DISTINCT ${betsTable.userId})` })
+        .from(betsTable)
+        .where(eq(betsTable.marketId, market.id));
+      const participants = Number(participantsResult[0]?.uniqueUsers || 0);
+
       const totalMarketBets = betsPerOutcome.reduce((sum, b) => sum + b.totalBets, 0);
 
       return {
@@ -173,6 +203,7 @@ export async function handleListMarkets({ query }: { query: { status?: string } 
         title: market.title,
         status: market.status,
         creator: market.creator?.username,
+        createdAt: market.createdAt,
         outcomes: market.outcomes.map((outcome) => {
           const outcomeBets =
             betsPerOutcome.find((b) => b.outcomeId === outcome.id)?.totalBets || 0;
@@ -187,11 +218,43 @@ export async function handleListMarkets({ query }: { query: { status?: string } 
           };
         }),
         totalMarketBets,
+        participants,
       };
     }),
   );
 
-  return enrichedMarkets;
+  // Sort markets
+  enrichedMarkets.sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case "createdAt":
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        break;
+      case "totalBets":
+        comparison = a.totalMarketBets - b.totalMarketBets;
+        break;
+      case "participants":
+        comparison = a.participants - b.participants;
+        break;
+    }
+    return sortOrder === "desc" ? -comparison : comparison;
+  });
+
+  // Apply pagination
+  const paginatedMarkets = enrichedMarkets.slice(offset, offset + limit);
+  const totalPages = Math.ceil(totalCount / limit);
+
+  return {
+    markets: paginatedMarkets,
+    pagination: {
+      page,
+      limit,
+      totalCount,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    },
+  };
 }
 
 export async function handleGetMarket({
@@ -307,6 +370,9 @@ export async function handlePlaceBet({
     })
     .returning();
 
+  // Broadcast real-time update to all connected clients
+  broadcastMarketUpdate(marketId);
+
   set.status = 201;
   return {
     id: bet[0].id,
@@ -315,4 +381,65 @@ export async function handlePlaceBet({
     outcomeId: bet[0].outcomeId,
     amount: bet[0].amount,
   };
+}
+
+// Helper function to broadcast market updates via WebSocket
+async function broadcastMarketUpdate(marketId: number) {
+  try {
+    const market = await db.query.marketsTable.findFirst({
+      where: eq(marketsTable.id, marketId),
+      with: {
+        outcomes: {
+          orderBy: (outcomes, { asc }) => asc(outcomes.position),
+        },
+      },
+    });
+
+    if (!market) return;
+
+    const betsPerOutcome = await Promise.all(
+      market.outcomes.map(async (outcome) => {
+        const totalBets = await db
+          .select()
+          .from(betsTable)
+          .where(eq(betsTable.outcomeId, outcome.id));
+
+        const totalAmount = totalBets.reduce((sum, bet) => sum + bet.amount, 0);
+        return { outcomeId: outcome.id, totalBets: totalAmount };
+      }),
+    );
+
+    const participantsResult = await db
+      .select({ uniqueUsers: sql<number>`COUNT(DISTINCT ${betsTable.userId})` })
+      .from(betsTable)
+      .where(eq(betsTable.marketId, marketId));
+    const participants = Number(participantsResult[0]?.uniqueUsers || 0);
+
+    const totalMarketBets = betsPerOutcome.reduce((sum, b) => sum + b.totalBets, 0);
+
+    const outcomes = market.outcomes.map((outcome) => {
+      const outcomeBets = betsPerOutcome.find((b) => b.outcomeId === outcome.id)?.totalBets || 0;
+      const odds =
+        totalMarketBets > 0 ? Number(((outcomeBets / totalMarketBets) * 100).toFixed(2)) : 0;
+
+      return {
+        id: outcome.id,
+        title: outcome.title,
+        odds,
+        totalBets: outcomeBets,
+      };
+    });
+
+    wsManager.broadcast({
+      type: "market_update",
+      marketId,
+      data: {
+        outcomes,
+        totalMarketBets,
+        participants,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to broadcast market update:", error);
+  }
 }

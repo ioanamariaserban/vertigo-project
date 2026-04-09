@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:4001";
 
 // Types
 export interface Market {
@@ -7,8 +8,10 @@ export interface Market {
   description?: string;
   status: "active" | "resolved";
   creator?: string;
+  createdAt?: string;
   outcomes: MarketOutcome[];
   totalMarketBets: number;
+  participants?: number;
 }
 
 export interface MarketOutcome {
@@ -33,6 +36,44 @@ export interface Bet {
   amount: number;
   createdAt: string;
 }
+
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface MarketsResponse {
+  markets: Market[];
+  pagination: PaginationInfo;
+}
+
+export type SortBy = "createdAt" | "totalBets" | "participants";
+export type SortOrder = "asc" | "desc";
+
+export interface ListMarketsParams {
+  status?: "active" | "resolved";
+  page?: number;
+  limit?: number;
+  sortBy?: SortBy;
+  sortOrder?: SortOrder;
+}
+
+// WebSocket Types
+export interface MarketUpdateMessage {
+  type: "market_update";
+  marketId: number;
+  data: {
+    outcomes: MarketOutcome[];
+    totalMarketBets: number;
+    participants: number;
+  };
+}
+
+export type WebSocketMessage = MarketUpdateMessage;
 
 // API Client
 class ApiClient {
@@ -91,8 +132,16 @@ class ApiClient {
   }
 
   // Markets endpoints
-  async listMarkets(status: "active" | "resolved" = "active"): Promise<Market[]> {
-    return this.request(`/api/markets?status=${status}`);
+  async listMarkets(params: ListMarketsParams = {}): Promise<MarketsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.set("status", params.status);
+    if (params.page) searchParams.set("page", params.page.toString());
+    if (params.limit) searchParams.set("limit", params.limit.toString());
+    if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params.sortOrder) searchParams.set("sortOrder", params.sortOrder);
+    
+    const queryString = searchParams.toString();
+    return this.request(`/api/markets${queryString ? `?${queryString}` : ""}`);
   }
 
   async getMarket(id: number): Promise<Market> {
@@ -115,4 +164,101 @@ class ApiClient {
   }
 }
 
+// WebSocket Manager
+class WebSocketManager {
+  private ws: WebSocket | null = null;
+  private url: string;
+  private listeners: Map<string, Set<(data: WebSocketMessage) => void>> = new Map();
+  private reconnectTimeout: number | null = null;
+  private pingInterval: number | null = null;
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  connect() {
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+
+    this.ws = new WebSocket(`${this.url}/ws`);
+
+    this.ws.onopen = () => {
+      console.log("WebSocket connected");
+      // Start ping interval for keep-alive
+      this.pingInterval = window.setInterval(() => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send("ping");
+        }
+      }, 30000);
+    };
+
+    this.ws.onmessage = (event) => {
+      if (event.data === "pong") return;
+      
+      try {
+        const message: WebSocketMessage = JSON.parse(event.data);
+        this.notifyListeners(message);
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
+    };
+
+    this.ws.onclose = () => {
+      console.log("WebSocket disconnected");
+      this.cleanup();
+      // Attempt to reconnect after 3 seconds
+      this.reconnectTimeout = window.setTimeout(() => {
+        this.connect();
+      }, 3000);
+    };
+
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+  }
+
+  disconnect() {
+    this.cleanup();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+
+  private cleanup() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+  }
+
+  subscribe(eventType: string, callback: (data: WebSocketMessage) => void) {
+    if (!this.listeners.has(eventType)) {
+      this.listeners.set(eventType, new Set());
+    }
+    this.listeners.get(eventType)!.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this.listeners.get(eventType)?.delete(callback);
+    };
+  }
+
+  private notifyListeners(message: WebSocketMessage) {
+    const listeners = this.listeners.get(message.type);
+    if (listeners) {
+      listeners.forEach((callback) => callback(message));
+    }
+    // Also notify "all" listeners
+    const allListeners = this.listeners.get("all");
+    if (allListeners) {
+      allListeners.forEach((callback) => callback(message));
+    }
+  }
+}
+
 export const api = new ApiClient(API_BASE_URL);
+export const wsManager = new WebSocketManager(WS_BASE_URL);

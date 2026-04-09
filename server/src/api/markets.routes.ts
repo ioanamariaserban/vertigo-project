@@ -7,6 +7,10 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
   .get("/", handleListMarkets, {
     query: t.Object({
       status: t.Optional(t.String()),
+      page: t.Optional(t.Numeric()),
+      limit: t.Optional(t.Numeric()),
+      sortBy: t.Optional(t.Union([t.Literal("createdAt"), t.Literal("totalBets"), t.Literal("participants")])),
+      sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
     }),
   })
   .get("/:id", handleGetMarket, {

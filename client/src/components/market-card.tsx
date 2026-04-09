@@ -12,14 +12,17 @@ export function MarketCard({ market }: MarketCardProps) {
   const navigate = useNavigate();
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-xl">{market.title}</CardTitle>
-            <CardDescription>By: {market.creator || "Unknown"}</CardDescription>
+    <Card className="transition-shadow hover:shadow-md">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg leading-tight line-clamp-2">{market.title}</CardTitle>
+            <CardDescription className="mt-1">By: {market.creator || "Unknown"}</CardDescription>
           </div>
-          <Badge variant={market.status === "active" ? "default" : "secondary"}>
+          <Badge
+            variant={market.status === "active" ? "default" : "secondary"}
+            className="shrink-0"
+          >
             {market.status === "active" ? "Active" : "Resolved"}
           </Badge>
         </div>
@@ -30,25 +33,35 @@ export function MarketCard({ market }: MarketCardProps) {
           {market.outcomes.map((outcome) => (
             <div
               key={outcome.id}
-              className="flex items-center justify-between bg-secondary/20 p-3 rounded-md"
+              className="flex items-center justify-between bg-slate-50 p-3 rounded-md border border-slate-100"
             >
-              <div>
-                <p className="text-sm font-medium">{outcome.title}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{outcome.title}</p>
+                <p className="text-xs text-slate-500">
                   ${outcome.totalBets.toFixed(2)} total
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold">{outcome.odds}%</p>
+              <div className="text-right ml-2">
+                <p className="text-lg font-bold text-slate-900">{outcome.odds}%</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Total Market Value */}
-        <div className="p-3 rounded-md border border-primary/20 bg-primary/5">
-          <p className="text-xs text-muted-foreground">Total Market Value</p>
-          <p className="text-2xl font-bold text-primary">${market.totalMarketBets.toFixed(2)}</p>
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-md bg-slate-50 border border-slate-100">
+            <p className="text-xs text-slate-500">Total Bets</p>
+            <p className="text-xl font-bold text-slate-900">
+              ${market.totalMarketBets.toFixed(2)}
+            </p>
+          </div>
+          <div className="p-3 rounded-md bg-slate-50 border border-slate-100">
+            <p className="text-xs text-slate-500">Participants</p>
+            <p className="text-xl font-bold text-slate-900">
+              {market.participants ?? 0}
+            </p>
+          </div>
         </div>
 
         {/* Action Button */}
