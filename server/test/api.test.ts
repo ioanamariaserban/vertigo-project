@@ -159,11 +159,13 @@ describe("Markets", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0].id).toBeDefined();
-    expect(data[0].title).toBeDefined();
-    expect(data[0].outcomes).toBeDefined();
+    expect(data.markets).toBeDefined();
+    expect(Array.isArray(data.markets)).toBe(true);
+    expect(data.markets.length).toBeGreaterThan(0);
+    expect(data.markets[0].id).toBeDefined();
+    expect(data.markets[0].title).toBeDefined();
+    expect(data.markets[0].outcomes).toBeDefined();
+    expect(data.pagination).toBeDefined();
   });
 
   it("GET /api/markets/:id — returns market detail", async () => {

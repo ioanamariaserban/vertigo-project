@@ -12,21 +12,46 @@ export function MarketCard({ market }: MarketCardProps) {
   const navigate = useNavigate();
 
   return (
-    <Card>
+    <Card className="h-full rounded-2xl">
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-xl">{market.title}</CardTitle>
-            <CardDescription>By: {market.creator || "Unknown"}</CardDescription>
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Badge
+              className={`rounded-xl whitespace-nowrap ${
+                market.status === "active"
+                  ? "!bg-green-300 !text-black"
+                  : market.status === "archived"
+                  ? "!bg-red-400 !text-white"
+                  : ""
+              }`}
+              variant="secondary"
+            >
+              {market.status === "active"
+                ? "Active"
+                : market.status === "resolved"
+                ? "Resolved"
+                : "Archived"}
+            </Badge>
           </div>
-          <Badge variant={market.status === "active" ? "default" : "secondary"}>
-            {market.status === "active" ? "Active" : "Resolved"}
-          </Badge>
+
+          <div>
+            <CardTitle className="text-xl leading-tight">
+              {market.title}
+            </CardTitle>
+            <CardDescription className="mt-2">
+              By: {market.creator || "Unknown"}
+            </CardDescription>
+            {market.createdAt && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Created: {new Date(market.createdAt).toLocaleString()}
+              </p>
+            )}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex h-full flex-col gap-4">
         {/* Outcomes */}
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1">
           {market.outcomes.map((outcome) => (
             <div
               key={outcome.id}
@@ -45,16 +70,23 @@ export function MarketCard({ market }: MarketCardProps) {
           ))}
         </div>
 
-        {/* Total Market Value */}
-        <div className="p-3 rounded-md border border-primary/20 bg-primary/5">
-          <p className="text-xs text-muted-foreground">Total Market Value</p>
-          <p className="text-2xl font-bold text-primary">${market.totalMarketBets.toFixed(2)}</p>
-        </div>
+        <div className="mt-auto space-y-4">
+          {/* Total Market Value */}
+          <div className="p-3 rounded-md border border-primary/20 bg-primary/5">
+            <p className="text-xs text-muted-foreground">Total Market Value</p>
+            <p className="text-2xl font-bold text-primary">${market.totalMarketBets.toFixed(2)}</p>
+          </div>
 
-        {/* Action Button */}
-        <Button className="w-full" onClick={() => navigate({ to: `/markets/${market.id}` })}>
-          {market.status === "active" ? "Place Bet" : "View Results"}
-        </Button>
+          {/* Action Button */}
+          <div className="p-2 flex flex-col items-center">
+            <Button 
+              className="w-1/2 rounded-xl transition-all duration-300 !bg-black !text-white hover:!bg-indigo-400 hover:[transform:rotateY(20deg)]"
+              onClick={() => navigate({ to: `/markets/${market.id}` })}
+            >
+              {market.status === "active" ? "Place Bet" : "View Results"}
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

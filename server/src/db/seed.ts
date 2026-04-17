@@ -177,15 +177,27 @@ async function insertUsers() {
 
   const passwordHash = await hashPassword(SHARED_PASSWORD);
   const runId = faker.string.alphanumeric({ length: 6, casing: "lower" });
+
+  const adminUser = {
+    username: "admin",
+    email: "admin@seed.local",
+    passwordHash,
+    role: "admin" as const,
+  };
+
   const userValues = Array.from({ length: USER_COUNT }, (_, index) => {
     const user = createRandomUser(runId, index + 1);
     return {
       ...user,
       passwordHash,
+      role: "user" as const,
     };
   });
 
   const insertedUsers: UserRow[] = [];
+
+  const [createdAdminUser] = await db.insert(schema.usersTable).values(adminUser).returning();
+  insertedUsers.push(createdAdminUser);
 
   for (const batch of chunkArray(userValues, USER_INSERT_BATCH_SIZE)) {
     const created = await db.insert(schema.usersTable).values(batch).returning();
@@ -196,11 +208,12 @@ async function insertUsers() {
     id: user.id,
     username: user.username,
     email: user.email,
-    password: SHARED_PASSWORD,
+    password: user.role === "admin" ? "admin123" : SHARED_PASSWORD,
     remainingBalance: faker.number.int({ min: 500, max: 10_000 }),
   }));
 
   console.log(`Created ${seededUsers.length} users.`);
+  console.log(`Admin credentials: admin@seed.local / admin123`);
 
   return seededUsers;
 }

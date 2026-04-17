@@ -6,7 +6,13 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 function CreateMarketPage() {
@@ -19,6 +25,12 @@ function CreateMarketPage() {
     navigate({ to: "/auth/login" });
     return null;
   }
+
+  const secondaryButtonClass =
+    "rounded-xl border-2 !border-gray-800 !bg-indigo-100/90 !text-indigo-900 !shadow-lg hover:!bg-indigo-200/80 hover:!border-indigo-400";
+
+  const primaryButtonClass =
+    "rounded-xl bg-black text-white shadow-md hover:bg-black/90";
 
   const form = useForm({
     defaultValues: {
@@ -43,7 +55,11 @@ function CreateMarketPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const market = await api.createMarket(values.title, values.description, validOutcomes);
+        const market = await api.createMarket(
+          values.title,
+          values.description,
+          validOutcomes
+        );
         navigate({ to: `/markets/${market.id}` });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create market");
@@ -54,15 +70,57 @@ function CreateMarketPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-2xl mx-auto">
-        <Card>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-50 to-pink-100 px-4 py-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <Card className="border-white/60 bg-white/65 shadow-xl backdrop-blur">
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div>
+                  <h1 className="text-4xl font-bold tracking-tight text-gray-900">
+                    Create a Market
+                  </h1>
+                  <p className="mt-2 text-lg text-gray-600">
+                    Set up a new prediction market, add context, and define the
+                    possible outcomes users can bet on.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <div className="rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm text-gray-700 shadow-sm">
+                    Minimum 2 outcomes required
+                  </div>
+                  <div className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-700 shadow-sm">
+                    Live market updates supported
+                  </div>
+                  <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 shadow-sm">
+                    Ready for betting after creation
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 lg:justify-end">
+                <Button
+                  variant="outline"
+                  className={secondaryButtonClass}
+                  onClick={() => navigate({ to: "/" })}
+                >
+                  Back to Markets
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/60 bg-white/65 shadow-lg backdrop-blur">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-3xl">Create a Market</CardTitle>
+            <CardTitle className="text-2xl">Market Details</CardTitle>
             <CardDescription>
-              Set up a new prediction market and define the outcomes
+              Fill in the market information and define the outcomes clearly so
+              users can understand what they are betting on.
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form
               onSubmit={(e) => {
@@ -83,6 +141,7 @@ function CreateMarketPage() {
                       onBlur={field.handleBlur}
                       placeholder="e.g., Will Bitcoin reach $100k by end of 2024?"
                       disabled={isLoading}
+                      className="rounded-xl"
                     />
                   </div>
                 )}
@@ -100,6 +159,7 @@ function CreateMarketPage() {
                       placeholder="Provide more context about this market..."
                       disabled={isLoading}
                       rows={4}
+                      className="rounded-xl"
                     />
                   </div>
                 )}
@@ -109,7 +169,7 @@ function CreateMarketPage() {
                 <Label>Outcomes</Label>
                 <form.Field name="outcomes">
                   {(field) => (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {field.state.value.map((outcome, index) => (
                         <Input
                           key={index}
@@ -123,8 +183,10 @@ function CreateMarketPage() {
                           onBlur={field.handleBlur}
                           placeholder={`Outcome ${index + 1}`}
                           disabled={isLoading}
+                          className="rounded-xl"
                         />
                       ))}
+
                       <Button
                         type="button"
                         variant="outline"
@@ -132,7 +194,7 @@ function CreateMarketPage() {
                           field.handleChange([...field.state.value, ""]);
                         }}
                         disabled={isLoading}
-                        className="w-full"
+                        className={`w-full ${secondaryButtonClass}`}
                       >
                         + Add Outcome
                       </Button>
@@ -142,19 +204,24 @@ function CreateMarketPage() {
               </div>
 
               {error && (
-                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
 
-              <div className="flex gap-4">
-                <Button type="submit" className="flex-1" disabled={isLoading}>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Button
+                  type="submit"
+                  className={`flex-1 ${primaryButtonClass}`}
+                  disabled={isLoading}
+                >
                   {isLoading ? "Creating..." : "Create Market"}
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className={`flex-1 ${secondaryButtonClass}`}
                   onClick={() => navigate({ to: "/" })}
                   disabled={isLoading}
                 >

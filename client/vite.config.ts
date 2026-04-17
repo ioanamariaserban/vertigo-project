@@ -18,6 +18,14 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4001',
+        changeOrigin: true,
+      },
+    },
+  },
 });
 
 export default config;

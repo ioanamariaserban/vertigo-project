@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { User } from "./api";
+import { api, User } from "./api";
 
 interface AuthContextType {
   user: User | null;
@@ -16,21 +16,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load user from localStorage on mount
-    const token = localStorage.getItem("auth_token");
-    const userData = localStorage.getItem("auth_user");
+    async function loadUser() {
+      const token = localStorage.getItem("auth_token");
+      const userData = localStorage.getItem("auth_user");
 
-    if (token && userData) {
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser({
+            ...parsedUser,
+            role: parsedUser.role ?? "user",
+            balance: parsedUser.balance ?? 0,
+            token,
+          });
+        } catch {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_user");
+        }
+      }
+
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser({ ...parsedUser, token });
+        const currentUser = await api.getCurrentUser();
+        setUser(currentUser);
+        localStorage.setItem(
+          "auth_user",
+          JSON.stringify({
+            id: currentUser.id,
+            username: currentUser.username,
+            email: currentUser.email,
+            role: currentUser.role,
+            balance: currentUser.balance,
+          }),
+        );
       } catch {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    setIsLoading(false);
+    loadUser();
   }, []);
 
   const login = (newUser: User) => {
@@ -42,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
+        role: newUser.role,
+        balance: newUser.balance,
       }),
     );
   };

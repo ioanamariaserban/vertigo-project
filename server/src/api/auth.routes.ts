@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
-import { handleRegister, handleLogin } from "./handlers";
+import { handleRegister, handleLogin, handleGetCurrentUser } from "./handlers";
+import { authMiddleware } from "../middleware/auth.middleware";
 
 export const authRoutes = new Elysia({ prefix: "/api/auth" })
   .post("/register", handleRegister, {
@@ -14,4 +15,6 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       email: t.String(),
       password: t.String(),
     }),
-  });
+  })
+  .use(authMiddleware)
+  .get("/me", handleGetCurrentUser);
