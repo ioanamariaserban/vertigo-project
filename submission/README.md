@@ -64,9 +64,7 @@ The application supports **real-time updates** through **Server-Sent Events (SSE
 
 ## Images or Video Demo
 
-<video width="420" height="315" controls
-src="./Demo_Market_v2.mp4">
-</video>
+https://drive.google.com/file/d/1KcdGEDYoO4_lv8KmergUdwLQ0JRp9tOa/view?usp=sharing
 
 ---
 
